@@ -1,94 +1,139 @@
 from fastapi import FastAPI
 from pydantic import BaseModel
 import joblib
-import pandas as pd
 import numpy as np
 
-# -----------------------------------
-# Create FastAPI app
-# -----------------------------------
-app = FastAPI(
-    title="Transfermarkt Player Value Prediction API",
-    description="XGBoost model for football player market value prediction",
-    version="1.0"
-)
+# -------------------------------------------------
+# Load trained model
+# -------------------------------------------------
+model = joblib.load("dt.pkl")
 
-# -----------------------------------
-# Load Model & Feature List
-# -----------------------------------
-model = joblib.load("xgboost_model.joblib")
-features = joblib.load("model_features.joblib")
+# -------------------------------------------------
+# Feature order (CRITICAL)
+# -------------------------------------------------
+FEATURES = [
+    "total_assists",
+    "total_nb_in_group",
+    "total_matches",
+    "total_subed_in",
+    "total_penalty_goals",
+    "total_goals",
+    "career_total_injuries",
+    "total_yellow_cards",
+    "total_nb_on_pitch",
+    "total_minutes_played",
+    "height",
+    "total_subed_out",
+    "total_own_goals",
+    "total_second_yellow_cards",
+    "total_direct_red_cards",
+    "main_position_encoded_midfield"
+]
 
-print("✅ Model loaded")
-print("✅ Features:", features)
+# -------------------------------------------------
+# Feature scaling params (hard-coded)
+# -------------------------------------------------
+MEAN = {
+    "total_assists": 23.347878,
+    "total_nb_in_group": 320.060681,
+    "total_matches": 24.144641,
+    "total_subed_in": 49.541427,
+    "total_penalty_goals": 2.828382,
+    "total_goals": 39.106686,
+    "career_total_injuries": 4.931014,
+    "total_yellow_cards": 34.002082,
+    "total_nb_on_pitch": 268.586098,
+    "total_minutes_played": 7865.713424,
+    "height": 184.620068,
+    "total_subed_out": 59.720806,
+    "total_own_goals": 0.540886,
+    "total_second_yellow_cards": 0.859453,
+    "total_direct_red_cards": 0.894848
+}
 
-# -----------------------------------
-# Request Schema (Dynamic Input)
-# -----------------------------------
+STD = {
+    "total_assists": 32.092319,
+    "total_nb_in_group": 216.067471,
+    "total_matches": 36.231985,
+    "total_subed_in": 45.503593,
+    "total_penalty_goals": 7.418137,
+    "total_goals": 60.167491,
+    "career_total_injuries": 5.541989,
+    "total_yellow_cards": 31.799643,
+    "total_nb_on_pitch": 192.149683,
+    "total_minutes_played": 9017.090235,
+    "height": 53.775656,
+    "total_subed_out": 59.735423,
+    "total_own_goals": 1.137524,
+    "total_second_yellow_cards": 1.381741,
+    "total_direct_red_cards": 1.427938
+}
+
+# -------------------------------------------------
+# Target scaling params
+# -------------------------------------------------
+TARGET_STD  = 193542928.53
+TARGET_MEAN = 9621216.77
+
+
+BINARY_FEATURES = {"main_position_encoded_midfield"}
+
+# -------------------------------------------------
+# FastAPI app
+# -------------------------------------------------
+app = FastAPI(title="Market Value Prediction API (Scaled Target)")
+
+# -------------------------------------------------
+# Input schema
+# -------------------------------------------------
 class PlayerInput(BaseModel):
-    Rank: float | None = 0
-    Rank_perf: float | None = 0
-    Age: float | None = 0
-    Age_perf: float | None = 0
-    Matches: float | None = 0
-    Goals: float | None = 0
-    goal_contribution: float | None = 0
-    Sentiment: float | None = 0
+    total_assists: float
+    total_nb_in_group: float
+    total_matches: float
+    total_subed_in: float
+    total_penalty_goals: float
+    total_goals: float
+    career_total_injuries: float
+    total_yellow_cards: float
+    total_nb_on_pitch: float
+    total_minutes_played: float
+    height: float
+    total_subed_out: float
+    total_own_goals: float
+    total_second_yellow_cards: float
+    total_direct_red_cards: float
+    main_position_encoded_midfield: int  # 0 or 1
 
-# -----------------------------------
-# Health Check
-# -----------------------------------
-@app.get("/health")
-def health():
-    return {
-        "status": "ok",
-        "model": "XGBoost",
-        "features": features
-    }
+# -------------------------------------------------
+# Scaling logic
+# -------------------------------------------------
+def scale_input(data: PlayerInput):
+    scaled = []
+    for feature in FEATURES:
+        value = getattr(data, feature)
 
-# -----------------------------------
-# Demo Prediction (Browser-friendly)
-# -----------------------------------
-@app.get("/predict_demo")
-def predict_demo():
-    # Create input with all features = 0
-    input_data = {feature: 0 for feature in features}
+        if feature in BINARY_FEATURES:
+            scaled.append(value)
+        else:
+            scaled.append((value - MEAN[feature]) / STD[feature])
 
-    # Change ONE feature for demo
-    input_data["Rank"] = 10
+    return np.array([scaled])
 
-    df = pd.DataFrame([input_data])
-
-    pred_log = model.predict(df)[0]
-    pred_euro = 10 ** pred_log
-
-    return {
-        "market_value_log": round(float(pred_log), 4),
-        "market_value_euro": round(float(pred_euro), 2)
-    }
-
-# -----------------------------------
-# Main Prediction Endpoint
-# -----------------------------------
+# -------------------------------------------------
+# Prediction endpoint
+# -------------------------------------------------
 @app.post("/predict")
 def predict(data: PlayerInput):
-    # Convert input to dict
-    user_data = data.dict()
+    X_scaled = scale_input(data)
 
-    # Ensure all features exist
-    input_data = {feature: 0 for feature in features}
+    # Model outputs scaled target
+    y_scaled = model.predict(X_scaled)[0]
+    print("scaled input: ", X_scaled)
+    print("scaled value: ", y_scaled)
 
-    # Update with provided values
-    for key, value in user_data.items():
-        if key in input_data:
-            input_data[key] = value
-
-    df = pd.DataFrame([input_data])
-
-    pred_log = model.predict(df)[0]
-    pred_euro = 10 ** pred_log
+    # Inverse transform → ORIGINAL market value
+    y_original = y_scaled * TARGET_STD + TARGET_MEAN
 
     return {
-        "market_value_log": round(float(pred_log), 4),
-        "market_value_euro": round(float(pred_euro), 2)
+        "predicted_market_value": float(y_original)
     }
