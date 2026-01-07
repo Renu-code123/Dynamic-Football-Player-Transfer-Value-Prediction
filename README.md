@@ -1,55 +1,100 @@
-# CircuitGuard: PCB Defect Detection
+# Player Transfer Value Prediction System
 
 ## Overview
 
-**CircuitGuard** is an AI-powered system that automatically detects and classifies defects in **Printed Circuit Boards (PCBs)** using deep learning and computer vision. It replaces manual visual inspection with a fast, accurate, and scalable solution suitable for modern electronics manufacturing.
+This repository contains an end-to-end machine learning project that predicts professional football players’ transfer market values by integrating player performance metrics, injury history, demographic attributes, and social media sentiment analysis.
+
+The project demonstrates a complete AI workflow—from data ingestion and preprocessing to model development, evaluation, and deployment—following industry-aligned practices suitable for real-world sports analytics applications.
+
 
 ## Problem Statement
 
-Manual PCB inspection is time-consuming, inconsistent, and prone to human error. Even small defects can cause device failure and financial loss.
+Player transfer valuation is influenced by multiple interacting factors such as on-field performance, availability, age, injuries, and public perception. Traditional valuation methods are often manual and subjective, leading to inconsistent outcomes.
 
-## Solution
+This project addresses the problem by building a data-driven, machine learning–based system capable of producing reliable and scalable transfer value predictions.
 
-CircuitGuard uses a **YOLO-based object detection model** served via a **FastAPI backend** and an interactive **Streamlit frontend** to perform real-time PCB defect detection.
 
-## Key Features
+## Data Sources
 
-* Automated PCB defect detection
-* YOLO-based deep learning model
-* FastAPI inference API
-* Streamlit web interface
-* Real-time visualization with bounding boxes
+* Player performance statistics (goals, assists, minutes played, cards, clean sheets)
+* Player profile data (age, height, nationality, position, preferred foot)
+* Injury history (days missed, matches missed)
+* Historical market value data
+* Social media sentiment data derived from Twitter (VADER and TextBlob)
+
+All datasets are sourced from publicly available repositories and processed in CSV format using Python.
+
+
+## Data Engineering and Preprocessing
+
+* Integrated multiple datasets using player ID, season, and standardized player names
+* Handled missing values with domain-driven assumptions (e.g., zero injury days)
+* Corrected invalid data types and rounded count-based features to integers
+* Treated outliers using percentile-based capping to preserve data integrity
+* Optimized memory usage with chunk-based data merging
+* Engineered derived features such as player age
+* Encoded categorical variables using label encoding and one-hot encoding
+* Applied scaling and log transformations to stabilize model learning
+
+
+## Machine Learning Models
+
+The following regression models were implemented and evaluated:
+
+* Linear Regression (baseline)
+* Polynomial Regression
+* Random Forest Regression
+* XGBoost Regression
+
+### Model Evaluation Metrics
+
+* R² Score
+* Mean Absolute Error (MAE)
+* Root Mean Squared Error (RMSE)
+
+Ensemble-based models significantly outperformed linear approaches. XGBoost delivered the best overall performance in terms of accuracy and generalization.
+
+
+## Deployment Architecture
+
+The project is deployed as a full-stack machine learning application with a clear separation of concerns.
+
+### Backend (FastAPI)
+
+* RESTful API for real-time predictions
+* Input validation using data schemas
+* Consistent preprocessing during training and inference
+* High-performance and scalable architecture
+
+### Frontend (Streamlit)
+
+* Interactive web interface for entering player attributes
+* Real-time display of predicted transfer values
+* Seamless integration with the backend API
+
 
 ## Tech Stack
 
-* **ML/DL:** YOLO, PyTorch, OpenCV
-* **Backend:** FastAPI, Uvicorn
-* **Frontend:** Streamlit
-* **Language:** Python
+* Programming Language: Python
+* Data Processing: Pandas, NumPy
+* Machine Learning: Scikit-learn, XGBoost
+* NLP and Sentiment Analysis: VADER, TextBlob
+* Backend Framework: FastAPI
+* Frontend Framework: Streamlit
 
-## System Flow
 
-1. Upload PCB image via web UI
-2. Image sent to FastAPI backend
-3. YOLO model performs defect detection
-4. Results returned and visualized
+## Project Highlights
+
+* End-to-end machine learning system implementation
+* Strong emphasis on data quality, preprocessing, and feature engineering
+* Hands-on experience with ensemble learning techniques
+* Production-oriented deployment using FastAPI and Streamlit
+* Modular and scalable system design
+
 
 ## Use Cases
 
-* Electronics manufacturing quality control
-* Automated Optical Inspection (AOI)
-* Smart factory and Industry 4.0 systems
+* Football clubs and scouting teams
+* Sports analytics and performance evaluation
+* AI-driven decision support systems in sports management
 
-## Outcome
-
-Delivered an end-to-end AI application demonstrating:
-
-* Applied computer vision
-* Production-style API design
-* Clean ML-to-UI integration
-
-## Future Scope
-
-* Edge deployment
-* Batch inspection
-* Defect analytics dashboard
