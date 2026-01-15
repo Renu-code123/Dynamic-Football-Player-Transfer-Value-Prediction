@@ -6,7 +6,7 @@ import plotly.express as px
 import shap
 
 
-st.set_page_config(
+st.set_page_config(             
     page_title="Football Market Value Predictor",
     layout="wide"
 )
